@@ -30,22 +30,6 @@ function saveState(state) {
   }
 }
 
-// ─── LANGUAGE DETECTION ─────────────────────────
-function detectLanguage(text) {
-  text = text.toLowerCase();
-
-  if (
-    text.includes("नमस्कार") ||
-    text.includes("नाव") ||
-    text.includes("तारीख") ||
-    text.includes("वेळ")
-  ) {
-    return "mr";
-  }
-
-  return "en";
-}
-
 // ─── VALIDATIONS ─────────────────────────
 function isValidName(name) {
   return /^[a-zA-Z ]+$/.test(name);
@@ -111,6 +95,11 @@ const messages = {
 const GOOGLE_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxqjgsxCavddi64KHKq7HhWv1ukMccuY3HU5GG7zOG89bxiG6qj0Qj877ARnUH9P1Og/exec";
 
+// ─── ROOT CHECK ─────────────────────
+app.get("/", (req, res) => {
+  res.send("✅ Bot is running");
+});
+
 // ─── MAIN ROUTE ─────────────────────
 app.post("/chat", async (req, res) => {
   const rawMsg = (req.body.message || req.body.Body || "").trim();
@@ -121,108 +110,116 @@ app.post("/chat", async (req, res) => {
   const allState = loadState();
 
   if (!allState[userId]) {
-    allState[userId] = { step: "none" };
+    allState[userId] = { step: "lang" }; // start with language
   }
 
   const state = allState[userId];
-
-  // 🔥 Detect language once
-  if (!state.lang) {
-    state.lang = detectLanguage(rawMsg);
-  }
-
-  const lang = state.lang;
-  const msg = messages[lang];
-  const input = rawMsg.toLowerCase();
-
   let reply = "";
 
-  // ─── START ─────────────────────
-  if (input === "hi" || input === "hello" || input === "नमस्कार") {
-    reply = msg.menu;
-  }
-
-  // ─── MENU OPTIONS ─────────────
-  else if (input === "1" && state.step === "none") {
-    state.step = "name";
-    reply = msg.askName;
-  }
-
-  else if (input === "2") {
-    reply =
-      lang === "mr"
-        ? "📅 सोम-शनि, 10AM–6PM"
-        : "📅 Mon–Sat, 10AM–6PM";
-  }
-
-  else if (input === "3") {
-    reply =
-      lang === "mr"
-        ? "📞 संपर्क: +91-XXXXXXXXXX"
-        : "📞 Contact: +91-XXXXXXXXXX";
-  }
-
-  else if (input === "4") {
-    reply =
-      lang === "mr"
-        ? "ℹ️ अपॉइंटमेंटसाठी 1 टाका"
-        : "ℹ️ Press 1 to book appointment";
-  }
-
-  // ─── NAME ─────────────────────
-  else if (state.step === "name") {
-    if (!isValidName(rawMsg)) {
-      reply = msg.invalidName;
+  // ─── LANGUAGE SELECTION ─────────────────
+  if (state.step === "lang") {
+    if (rawMsg === "1") {
+      state.lang = "en";
+      state.step = "none";
+      reply = messages.en.menu;
+    } else if (rawMsg === "2") {
+      state.lang = "mr";
+      state.step = "none";
+      reply = messages.mr.menu;
     } else {
-      state.name = rawMsg;
-      state.step = "date";
-      reply = msg.askDate;
+      reply = `🌐 Choose Language:\n\n1️⃣ English\n2️⃣ मराठी`;
     }
   }
 
-  // ─── DATE ─────────────────────
-  else if (state.step === "date") {
-    if (!isValidDate(rawMsg)) {
-      reply = msg.invalidDate;
-    } else {
-      state.date = rawMsg;
-      state.step = "time";
-      reply = msg.askTime;
-    }
-  }
-
-  // ─── TIME ─────────────────────
-  else if (state.step === "time") {
-    const selectedTime = timeOptions[rawMsg];
-
-    if (!selectedTime) {
-      reply = msg.invalidTime;
-    } else {
-      state.time = selectedTime;
-
-      const { name, date, time } = state;
-
-      try {
-        await axios.post(GOOGLE_SCRIPT_URL, { name, date, time });
-        console.log("✅ Sheet saved");
-      } catch (err) {
-        console.log("❌ Sheet error:", err.message);
-      }
-
-      reply = msg.success(name, date, time);
-
-      allState[userId] = { step: "none" }; // reset
-    }
-  }
-
-  // ─── DEFAULT ───────────────────
   else {
-    reply = msg.menu;
+    const lang = state.lang || "en";
+    const msg = messages[lang];
+    const input = rawMsg.toLowerCase();
+
+    // START
+    if (input === "hi" || input === "hello" || input === "नमस्कार") {
+      state.step = "lang";
+      reply = `🌐 Choose Language:\n\n1️⃣ English\n2️⃣ मराठी`;
+    }
+
+    // MENU
+    else if (input === "1" && state.step === "none") {
+      state.step = "name";
+      reply = msg.askName;
+    }
+
+    else if (input === "2") {
+      reply =
+        lang === "mr"
+          ? "📅 सोम-शनि, 10AM–6PM"
+          : "📅 Mon–Sat, 10AM–6PM";
+    }
+
+    else if (input === "3") {
+      reply =
+        lang === "mr"
+          ? "📞 संपर्क: +91-XXXXXXXXXX"
+          : "📞 Contact: +91-XXXXXXXXXX";
+    }
+
+    else if (input === "4") {
+      reply =
+        lang === "mr"
+          ? "ℹ️ अपॉइंटमेंटसाठी 1 टाका"
+          : "ℹ️ Press 1 to book appointment";
+    }
+
+    // NAME
+    else if (state.step === "name") {
+      if (!isValidName(rawMsg)) {
+        reply = msg.invalidName;
+      } else {
+        state.name = rawMsg;
+        state.step = "date";
+        reply = msg.askDate;
+      }
+    }
+
+    // DATE
+    else if (state.step === "date") {
+      if (!isValidDate(rawMsg)) {
+        reply = msg.invalidDate;
+      } else {
+        state.date = rawMsg;
+        state.step = "time";
+        reply = msg.askTime;
+      }
+    }
+
+    // TIME
+    else if (state.step === "time") {
+      const selectedTime = timeOptions[rawMsg];
+
+      if (!selectedTime) {
+        reply = msg.invalidTime;
+      } else {
+        state.time = selectedTime;
+
+        const { name, date, time } = state;
+
+        try {
+          await axios.post(GOOGLE_SCRIPT_URL, { name, date, time });
+        } catch (err) {}
+
+        reply = msg.success(name, date, time);
+
+        allState[userId] = { step: "lang" }; // reset
+      }
+    }
+
+    else {
+      reply = msg.menu;
+    }
   }
 
   saveState(allState);
 
-  // Twilio
+  // Twilio response
   if (req.body.Body) {
     res.set("Content-Type", "text/xml");
     return res.send(`
