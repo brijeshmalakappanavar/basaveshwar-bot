@@ -1,0 +1,11 @@
+{
+  "name": "basaveshwar-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp bot for optical shop",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
