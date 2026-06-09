@@ -8,51 +8,156 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// ─── STATE FILE ─────────────────────────────────────────
-const STATE_FILE = path.resolve("userState.json");
+// ─── STATE & MEMORY FILES ────────────────────────────────
+const STATE_FILE  = path.resolve("userState.json");
+const MEMORY_FILE = path.resolve("customerMemory.json");
 
-function loadState() {
-  try {
-    if (fs.existsSync(STATE_FILE)) {
-      return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-    }
-  } catch (e) {
-    console.error("Load error:", e.message);
-  }
-  return {};
-}
+function loadState()        { try { if (fs.existsSync(STATE_FILE))  return JSON.parse(fs.readFileSync(STATE_FILE,  "utf-8")); } catch(e){ console.error("Load error:",  e.message); } return {}; }
+function saveState(s)       { try { fs.writeFileSync(STATE_FILE,  JSON.stringify(s, null, 2)); } catch(e){ console.error("Save error:",  e.message); } }
+function loadMemory()       { try { if (fs.existsSync(MEMORY_FILE)) return JSON.parse(fs.readFileSync(MEMORY_FILE, "utf-8")); } catch(e){ console.error("Mem load:",    e.message); } return {}; }
+function saveMemory(m)      { try { fs.writeFileSync(MEMORY_FILE, JSON.stringify(m, null, 2)); } catch(e){ console.error("Mem save:",    e.message); } }
 
-function saveState(state) {
-  try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
-  } catch (e) {
-    console.error("Save error:", e.message);
-  }
-}
+// ─── CONFIG ──────────────────────────────────────────────
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFrnBZRlyabEdotl13lWQUTxmeyRxFL_q_tPi01XarGMgfar7mYvH5clbf7KBYusM-/exec";
 
-// ─── VALIDATIONS ─────────────────────────
-function isValidName(name) {
-  return /^[a-zA-Z\u0900-\u097F ]+$/.test(name.trim()); // supports Marathi names too
-}
+// ── Owner WhatsApp number (Sudeep Khot) — format: whatsapp:+91XXXXXXXXXX
+const OWNER_WA = "whatsapp:+917026136116";
 
-function isValidDate(date) {
-  const num = parseInt(date);
-  return !isNaN(num) && num >= 1 && num <= 31;
-}
+// ── Twilio credentials (set as Railway env vars — never hardcode)
+const TWILIO_SID   = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_FROM  = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
 
-function isValidPhone(phone) {
-  return /^[6-9]\d{9}$/.test(phone.trim());
-}
+// ─── VALIDATIONS ─────────────────────────────────────────
+function isValidName(n)  { return /^[a-zA-Z\u0900-\u097F ]+$/.test(n.trim()); }
+function isValidPhone(p) { return /^[6-9]\d{9}$/.test(p.trim()); }
+function isValidDate(d)  { const n = parseInt(d.trim()); return !isNaN(n) && n >= 1 && n <= 31; }
 
-const timeOptions = {
-  "1": "10:00 AM",
-  "2": "12:00 PM",
-  "3": "02:00 PM",
-  "4": "04:00 PM",
-  "5": "06:00 PM",
+// ─── DATE/TIME LOOKUP TABLES ─────────────────────────────
+const monthOptions = {
+  "1":"January","2":"February","3":"March","4":"April",
+  "5":"May","6":"June","7":"July","8":"August",
+  "9":"September","10":"October","11":"November","12":"December",
 };
 
-// ─── MESSAGES ─────────────────────────
+const timeOptions = {
+  "1":"10:00 AM","2":"12:00 PM","3":"02:00 PM","4":"04:00 PM","5":"06:00 PM",
+};
+
+// ─── CATALOGUE IMAGES ────────────────────────────────────
+// Add real publicly-hosted image URLs here (Google Drive share links,
+// Cloudinary, imgbb, etc.). Each entry: { caption, url }
+const catalogue = {
+  en: {
+    menu: `🖼️ *Our Eyewear Gallery*
+
+What would you like to see?
+
+1️⃣ Spectacle Frames
+2️⃣ Sunglasses
+3️⃣ Kids Eyewear
+4️⃣ Shop Photos
+5️⃣ Before & After
+
+0️⃣ Back to Main Menu`,
+
+    categories: {
+      "1": {
+        title: "👓 Spectacle Frames",
+        images: [
+          { caption: "👓 Classic Full-Rim Frames — ₹500 onwards", url: "https://i.ibb.co/gZC60Qd9/image.jpg" },
+          { caption: "🔲 Rimless & Half-Rim Frames — ₹800 onwards", url: "https://i.ibb.co/21RC33K1/image.jpg" },
+          { caption: "✨ Premium Branded Frames (Titan, Ray-Ban) — ₹1500 onwards", url: "https://i.ibb.co/YFt26ydX/image.jpg" },
+        ],
+      },
+      "2": {
+        title: "🌞 Sunglasses",
+        images: [
+          { caption: "😎 UV Protection Sunglasses — ₹600 onwards", url: "https://YOUR_IMAGE_URL_4" },
+          { caption: "🏍️ Riding / Sports Sunglasses — ₹800 onwards", url: "https://YOUR_IMAGE_URL_5" },
+        ],
+      },
+      "3": {
+        title: "👶 Kids Eyewear",
+        images: [
+          { caption: "👦 Kids Frames (Flexible & Durable) — ₹400 onwards", url: "https://YOUR_IMAGE_URL_6" },
+          { caption: "🎨 Colourful Kids Frames — ₹400 onwards", url: "https://YOUR_IMAGE_URL_7" },
+        ],
+      },
+      "4": {
+        title: "🏪 Our Shop",
+        images: [
+          { caption: "🏪 Basaveshwar Opticals — Front View", url: "https://YOUR_IMAGE_URL_8" },
+          { caption: "🔬 Our Eye Testing Equipment", url: "https://YOUR_IMAGE_URL_9" },
+          { caption: "🗂️ Our Frame Collection Display", url: "https://YOUR_IMAGE_URL_10" },
+        ],
+      },
+      "5": {
+        title: "✨ Before & After",
+        images: [
+          { caption: "✅ Customer Transformation — Progressive Lenses", url: "https://YOUR_IMAGE_URL_11" },
+          { caption: "✅ Customer Transformation — Kids Specs", url: "https://YOUR_IMAGE_URL_12" },
+        ],
+      },
+    },
+  },
+
+  mr: {
+    menu: `🖼️ *आमची चष्मा गॅलरी*
+
+आपल्याला काय पाहायचे आहे?
+
+1️⃣ स्पेक्टेकल फ्रेम्स
+2️⃣ सनग्लासेस
+3️⃣ मुलांचा चष्मा
+4️⃣ दुकानाचे फोटो
+5️⃣ बिफोर & आफ्टर
+
+0️⃣ मुख्य मेनूवर परत`,
+
+    categories: {
+      "1": {
+        title: "👓 स्पेक्टेकल फ्रेम्स",
+        images: [
+          { caption: "👓 क्लासिक फुल-रिम फ्रेम्स — ₹५०० पासून", url: "https://i.ibb.co/gZC60Qd9/image.jpg" },
+          { caption: "🔲 रिमलेस व हाफ-रिम फ्रेम्स — ₹८०० पासून", url: "https://i.ibb.co/21RC33K1/image.jpg" },
+          { caption: "✨ प्रीमियम ब्रँडेड फ्रेम्स — ₹१५०० पासून", url: "https://i.ibb.co/YFt26ydX/image.jpg" },
+        ],
+      },
+      "2": {
+        title: "🌞 सनग्लासेस",
+        images: [
+          { caption: "😎 UV प्रोटेक्शन सनग्लासेस — ₹६०० पासून", url: "https://YOUR_IMAGE_URL_4" },
+          { caption: "🏍️ रायडिंग / स्पोर्ट्स सनग्लासेस — ₹८०० पासून", url: "https://YOUR_IMAGE_URL_5" },
+        ],
+      },
+      "3": {
+        title: "👶 मुलांचा चष्मा",
+        images: [
+          { caption: "👦 मुलांचे फ्रेम (फ्लेक्सिबल) — ₹४०० पासून", url: "https://YOUR_IMAGE_URL_6" },
+          { caption: "🎨 रंगीत मुलांचे फ्रेम — ₹४०० पासून", url: "https://YOUR_IMAGE_URL_7" },
+        ],
+      },
+      "4": {
+        title: "🏪 आमचे दुकान",
+        images: [
+          { caption: "🏪 बसवेश्वर ऑप्टिकल्स — समोरील दृश्य", url: "https://YOUR_IMAGE_URL_8" },
+          { caption: "🔬 आमची डोळे तपासणी उपकरणे", url: "https://YOUR_IMAGE_URL_9" },
+          { caption: "🗂️ आमचा फ्रेम संग्रह", url: "https://YOUR_IMAGE_URL_10" },
+        ],
+      },
+      "5": {
+        title: "✨ बिफोर & आफ्टर",
+        images: [
+          { caption: "✅ ग्राहक परिवर्तन — प्रोग्रेसिव्ह लेन्स", url: "https://YOUR_IMAGE_URL_11" },
+          { caption: "✅ ग्राहक परिवर्तन — मुलांचा चष्मा", url: "https://YOUR_IMAGE_URL_12" },
+        ],
+      },
+    },
+  },
+};
+
+// ─── MESSAGES ────────────────────────────────────────────
 const messages = {
   en: {
     welcome: `🏥 *Welcome to Basaveshwar Opticals!*
@@ -72,17 +177,26 @@ How can we assist you today?
 3️⃣ Lens & Frame Pricing
 4️⃣ Shop Timings & Location
 5️⃣ Services We Offer
-6️⃣ Contact Us
+6️⃣ View Eyewear Gallery 🖼️
+7️⃣ Contact Us
 
 _Reply with a number to continue_ 😊`,
 
-    askName: "👤 Please enter your *full name*:",
+    askName:     "👤 Please enter your *full name*:",
     invalidName: "❌ Please enter a valid name (letters only).",
 
-    askPhone: "📱 Please enter your *10-digit mobile number*:",
+    askPhone:     "📱 Please enter your *10-digit mobile number*:",
     invalidPhone: "❌ Please enter a valid 10-digit mobile number.",
 
-    askDate: "📅 Please enter your preferred *date* (1–31):",
+    askMonth: `📅 Please select the *month* for your appointment:
+
+1️⃣ January   2️⃣ February  3️⃣ March
+4️⃣ April     5️⃣ May       6️⃣ June
+7️⃣ July      8️⃣ August    9️⃣ September
+10️⃣ October  11️⃣ November  12️⃣ December`,
+    invalidMonth: "❌ Please enter a number between 1 and 12.",
+
+    askDate:     "📅 Please enter the *date* (1–31):",
     invalidDate: "❌ Please enter a valid date between 1 and 31.",
 
     askTime: `⏰ Please select your preferred *time slot*:
@@ -96,12 +210,12 @@ _Reply with a number to continue_ 😊`,
 
     askOrderPhone: "📱 Please enter the *mobile number* used at the time of order:",
 
-    success: (n, ph, d, t) =>
+    success: (n, ph, d, mo, t) =>
       `✅ *Appointment Confirmed!*
 
 👤 Name: ${n}
 📱 Phone: ${ph}
-📅 Date: ${d} April
+📅 Date: ${d} ${mo}
 ⏰ Time: ${t}
 
 _Our team will contact you if needed._
@@ -204,17 +318,26 @@ _आपला विश्वासू नेत्र सेवा केंद
 3️⃣ लेन्स व फ्रेम किंमत
 4️⃣ दुकानाची वेळ व पत्ता
 5️⃣ आमच्या सेवा
-6️⃣ संपर्क करा
+6️⃣ चष्मा गॅलरी पहा 🖼️
+7️⃣ संपर्क करा
 
 _पुढे जाण्यासाठी नंबर टाका_ 😊`,
 
-    askName: "👤 कृपया आपले *पूर्ण नाव* टाका:",
+    askName:     "👤 कृपया आपले *पूर्ण नाव* टाका:",
     invalidName: "❌ कृपया योग्य नाव टाका.",
 
-    askPhone: "📱 कृपया आपला *१०-अंकी मोबाईल नंबर* टाका:",
+    askPhone:     "📱 कृपया आपला *१०-अंकी मोबाईल नंबर* टाका:",
     invalidPhone: "❌ कृपया योग्य १०-अंकी मोबाईल नंबर टाका.",
 
-    askDate: "📅 कृपया आपली पसंतीची *तारीख* टाका (१–३१):",
+    askMonth: `📅 कृपया अपॉइंटमेंटसाठी *महिना* निवडा:
+
+1️⃣ जानेवारी   2️⃣ फेब्रुवारी  3️⃣ मार्च
+4️⃣ एप्रिल     5️⃣ मे          6️⃣ जून
+7️⃣ जुलै       8️⃣ ऑगस्ट      9️⃣ सप्टेंबर
+10️⃣ ऑक्टोबर  11️⃣ नोव्हेंबर  12️⃣ डिसेंबर`,
+    invalidMonth: "❌ कृपया १ ते १२ मधील संख्या टाका.",
+
+    askDate:     "📅 कृपया *तारीख* टाका (१–३१):",
     invalidDate: "❌ कृपया १ ते ३१ मधील योग्य तारीख टाका.",
 
     askTime: `⏰ कृपया आपली पसंतीची *वेळ* निवडा:
@@ -228,12 +351,12 @@ _पुढे जाण्यासाठी नंबर टाका_ 😊`,
 
     askOrderPhone: "📱 ऑर्डरच्या वेळी दिलेला *मोबाईल नंबर* टाका:",
 
-    success: (n, ph, d, t) =>
+    success: (n, ph, d, mo, t) =>
       `✅ *अपॉइंटमेंट निश्चित झाली!*
 
 👤 नाव: ${n}
 📱 फोन: ${ph}
-📅 तारीख: ${d} एप्रिल
+📅 तारीख: ${d} ${mo}
 ⏰ वेळ: ${t}
 
 _गरज असल्यास आमची टीम तुम्हाला संपर्क करेल._
@@ -319,224 +442,330 @@ _आम्ही साधारणतः ३० मिनिटांत उत
   },
 };
 
-// ─── GOOGLE SHEET ─────────────────────
-const GOOGLE_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxqjgsxCavddi64KHKq7HhWv1ukMccuY3HU5GG7zOG89bxiG6qj0Qj877ARnUH9P1Og/exec";
+// ─── TWILIO HELPER — send image via Twilio REST API ──────
+// WhatsApp images must be sent as a separate Twilio API call with mediaUrl
+async function sendImage(toNumber, caption, imageUrl) {
+  if (!TWILIO_SID || !TWILIO_TOKEN) {
+    console.warn("Twilio creds missing — skipping image send");
+    return;
+  }
+  try {
+    await axios.post(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
+      new URLSearchParams({
+        From: TWILIO_FROM,
+        To: toNumber,
+        Body: caption,
+        MediaUrl: imageUrl,
+      }).toString(),
+      {
+        auth: { username: TWILIO_SID, password: TWILIO_TOKEN },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      }
+    );
+  } catch (err) {
+    console.error("Image send error:", err.response?.data || err.message);
+  }
+}
 
-// ─── HELPER — send TwiML or JSON ──────
+// ─── OWNER NOTIFICATION ──────────────────────────────────
+async function notifyOwner(name, phone, date, month, time) {
+  if (!TWILIO_SID || !TWILIO_TOKEN) {
+    console.warn("Twilio creds missing — skipping owner notification");
+    return;
+  }
+  const ownerMsg =
+    `🔔 *New Appointment Booked!*\n\n` +
+    `👤 Name: ${name}\n` +
+    `📱 Phone: ${phone}\n` +
+    `📅 Date: ${date} ${month}\n` +
+    `⏰ Time: ${time}\n\n` +
+    `_Please confirm with the customer if needed._`;
+  try {
+    await axios.post(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
+      new URLSearchParams({
+        From: TWILIO_FROM,
+        To: OWNER_WA,
+        Body: ownerMsg,
+      }).toString(),
+      {
+        auth: { username: TWILIO_SID, password: TWILIO_TOKEN },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      }
+    );
+    console.log("Owner notified ✅");
+  } catch (err) {
+    console.error("Owner notify error:", err.response?.data || err.message);
+  }
+}
+
+// ─── TwiML REPLY HELPER ──────────────────────────────────
 function sendReply(req, res, reply) {
   if (req.body.Body !== undefined) {
     res.set("Content-Type", "text/xml");
-    // Escape XML special chars
     const safe = reply
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/'/g, "&apos;");
     return res.send(`<Response><Message>${safe}</Message></Response>`);
   }
   return res.json({ reply });
 }
 
-// ─── ROOT CHECK ─────────────────────
-app.get("/", (req, res) => {
-  res.send("✅ Basaveshwar Opticals Bot is running");
+// ─── ROUTES ──────────────────────────────────────────────
+app.get("/", (req, res) => res.send("✅ Basaveshwar Opticals Bot is running"));
+
+app.get("/debug", (req, res) => {
+  res.json({ ok: true, state: loadState(), memory: loadMemory() });
 });
 
-// ─── MAIN ROUTE ─────────────────────
+// ─── MAIN WEBHOOK ────────────────────────────────────────
 app.post("/chat", async (req, res) => {
-  const rawMsg = (req.body.message || req.body.Body || "").trim();
-  const userId = req.body.userId || req.body.From || "default";
+  try {
+    console.log("INCOMING:", JSON.stringify(req.body));
 
-  if (!rawMsg) return res.send("No message");
+    const rawMsg = (req.body.message || req.body.Body || "")
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "");
 
-  const allState = loadState();
+    const userId = req.body.userId || req.body.From || "default";
 
-  // New user — show welcome
-  if (!allState[userId]) {
-    allState[userId] = { step: "lang" };
-    saveState(allState);
-    return sendReply(req, res, messages.en.welcome);
-  }
+    // Ignore Twilio sandbox control messages
+    if (/^(join |stop$|start$|unstop$)/i.test(rawMsg)) {
+      res.set("Content-Type", "text/xml");
+      return res.send("<Response></Response>");
+    }
+    if (!rawMsg) {
+      res.set("Content-Type", "text/xml");
+      return res.send("<Response></Response>");
+    }
 
-  const state = allState[userId];
-  const input = rawMsg.trim();
-  const inputLower = input.toLowerCase();
-  let reply = "";
+    let allState = loadState();
+    const memory  = loadMemory();
 
-  // ─── RESET TRIGGERS ─────────────────
-  const resetWords = ["hi", "hello", "hey", "start", "menu", "नमस्कार", "नमस्ते", "हाय"];
-  if (resetWords.includes(inputLower)) {
-    allState[userId] = { step: "lang" };
-    saveState(allState);
-    return sendReply(req, res, messages.en.welcome);
-  }
+    // ── New user ─────────────────────────
+    if (!allState[userId]) {
+      allState[userId] = { step: "lang" };
+      saveState(allState);
+      const existing = memory[userId];
+      if (existing) {
+        const lang = existing.language || "en";
+        return sendReply(req, res, `👋 Welcome back ${existing.name}!\n\n${messages[lang].menu}`);
+      }
+      return sendReply(req, res, messages.en.welcome);
+    }
 
-  // ─── BACK TO MENU ───────────────────
-  if (input === "0") {
+    const state      = allState[userId];
+    const input      = rawMsg.trim();
+    const inputLower = input.toLowerCase();
+
+    console.log(`[${userId}] step=${state.step} input="${input}"`);
+
+    // ── Reset triggers ───────────────────
+    const resetWords = ["hi","hello","hey","start","menu","नमस्कार","नमस्ते","हाय"];
+    if (resetWords.includes(inputLower)) {
+      allState[userId] = { step: "lang" };
+      saveState(allState);
+      return sendReply(req, res, messages.en.welcome);
+    }
+
+    // ── Back to menu ─────────────────────
+    if (input === "0") {
+      const lang = state.lang || "en";
+      allState[userId] = { step: "none", lang };
+      saveState(allState);
+      return sendReply(req, res, messages[lang].menu);
+    }
+
+    // ── Language selection ────────────────
+    if (state.step === "lang") {
+      if (input === "1") {
+        allState[userId] = { step: "none", lang: "en" };
+        saveState(allState);
+        return sendReply(req, res, messages.en.menu);
+      } else if (input === "2") {
+        allState[userId] = { step: "none", lang: "mr" };
+        saveState(allState);
+        return sendReply(req, res, messages.mr.menu);
+      }
+      return sendReply(req, res, messages.en.welcome);
+    }
+
     const lang = state.lang || "en";
-    allState[userId] = { step: "none", lang };
-    saveState(allState);
-    return sendReply(req, res, messages[lang].menu);
-  }
+    const msg  = messages[lang];
+    const cat  = catalogue[lang];
 
-  // ─── LANGUAGE SELECTION ─────────────
-  if (state.step === "lang") {
-    if (input === "1") {
-      state.lang = "en";
-      state.step = "none";
-      reply = messages.en.menu;
-    } else if (input === "2") {
-      state.lang = "mr";
-      state.step = "none";
-      reply = messages.mr.menu;
-    } else {
-      reply = messages.en.welcome;
+    // ── Main menu ─────────────────────────
+    if (state.step === "none") {
+      switch (input) {
+        case "1":
+          allState[userId] = { ...state, step: "appt_name" };
+          saveState(allState);
+          return sendReply(req, res, msg.askName);
+        case "2":
+          allState[userId] = { ...state, step: "order_phone" };
+          saveState(allState);
+          return sendReply(req, res, msg.askOrderPhone);
+        case "3": return sendReply(req, res, msg.pricing);
+        case "4": return sendReply(req, res, msg.timings);
+        case "5": return sendReply(req, res, msg.services);
+        case "6":
+          allState[userId] = { ...state, step: "gallery_menu" };
+          saveState(allState);
+          return sendReply(req, res, cat.menu);
+        case "7": return sendReply(req, res, msg.contact);
+        default:  return sendReply(req, res, msg.menu);
+      }
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  // ─── MAIN FLOW ───────────────────────
-  const lang = state.lang || "en";
-  const msg = messages[lang];
+    // ── Gallery flow ──────────────────────
+    if (state.step === "gallery_menu") {
+      const selected = cat.categories[input];
+      if (!selected) {
+        return sendReply(req, res, cat.menu);
+      }
 
-  // ── MAIN MENU OPTIONS ────────────────
-  if (state.step === "none") {
-    switch (input) {
-      case "1":
-        state.step = "appt_name";
-        reply = msg.askName;
-        break;
-      case "2":
-        state.step = "order_phone";
-        reply = msg.askOrderPhone;
-        break;
-      case "3":
-        reply = msg.pricing;
-        break;
-      case "4":
-        reply = msg.timings;
-        break;
-      case "5":
-        reply = msg.services;
-        break;
-      case "6":
-        reply = msg.contact;
-        break;
-      default:
-        reply = msg.menu;
+      // Reset state back to none right away
+      allState[userId] = { ...state, step: "none" };
+      saveState(allState);
+
+      // Send category title first as TwiML reply
+      // Then send each image via Twilio API (images can't go in TwiML bulk)
+      sendReply(req, res, `${selected.title}\n\nSending images... 📸`);
+
+      // Fire images after response (non-blocking)
+      for (const img of selected.images) {
+        await sendImage(userId, img.caption, img.url);
+      }
+
+      // Send back-to-menu hint after images
+      await sendImage(
+        userId,
+        `\n_Reply *0* to go back to Main Menu or *6* to see more_ 😊`,
+        // no image for this one — send as plain text message instead
+        null
+      ).catch(() => {});
+
+      // Send the "back to menu" text as a separate plain message
+      try {
+        await axios.post(
+          `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
+          new URLSearchParams({
+            From: TWILIO_FROM,
+            To: userId,
+            Body: `_Reply *0* for Main Menu or *6* to browse more gallery_ 😊`,
+          }).toString(),
+          {
+            auth: { username: TWILIO_SID, password: TWILIO_TOKEN },
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          }
+        );
+      } catch (e) { console.error("Gallery hint error:", e.message); }
+
+      return; // response already sent above
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  // ── APPOINTMENT FLOW ─────────────────
-
-  if (state.step === "appt_name") {
-    if (!isValidName(input)) {
-      reply = msg.invalidName;
-    } else {
-      state.name = input;
-      state.step = "appt_phone";
-      reply = msg.askPhone;
+    // ── Appointment: name ─────────────────
+    if (state.step === "appt_name") {
+      if (!isValidName(input)) return sendReply(req, res, msg.invalidName);
+      allState[userId] = { ...state, step: "appt_phone", name: input };
+      saveState(allState);
+      return sendReply(req, res, msg.askPhone);
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  if (state.step === "appt_phone") {
-    if (!isValidPhone(input)) {
-      reply = msg.invalidPhone;
-    } else {
-      state.phone = input;
-      state.step = "appt_date";
-      reply = msg.askDate;
+    // ── Appointment: phone ────────────────
+    if (state.step === "appt_phone") {
+      if (!isValidPhone(input)) return sendReply(req, res, msg.invalidPhone);
+      allState[userId] = { ...state, step: "appt_month", phone: input };
+      saveState(allState);
+      return sendReply(req, res, msg.askMonth);
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  if (state.step === "appt_date") {
-    if (!isValidDate(input)) {
-      reply = msg.invalidDate;
-    } else {
-      state.date = input;
-      state.step = "appt_time";
-      reply = msg.askTime;
+    // ── Appointment: month ────────────────
+    if (state.step === "appt_month") {
+      const selectedMonth = monthOptions[input];
+      if (!selectedMonth) return sendReply(req, res, msg.invalidMonth);
+      allState[userId] = { ...state, step: "appt_date", month: selectedMonth };
+      saveState(allState);
+      return sendReply(req, res, msg.askDate);
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  if (state.step === "appt_time") {
-    const selectedTime = timeOptions[input];
-    if (!selectedTime) {
-      reply = msg.invalidTime;
-    } else {
-      state.time = selectedTime;
-      const { name, phone, date, time } = state;
+    // ── Appointment: date ─────────────────
+    if (state.step === "appt_date") {
+      if (!isValidDate(input)) return sendReply(req, res, msg.invalidDate);
+      allState[userId] = { ...state, step: "appt_time", date: input };
+      saveState(allState);
+      return sendReply(req, res, msg.askTime);
+    }
+
+    // ── Appointment: time ─────────────────
+    if (state.step === "appt_time") {
+      const selectedTime = timeOptions[input];
+      if (!selectedTime) return sendReply(req, res, msg.invalidTime);
+
+      const { name, phone, date, month } = state;
+
+      // Save memory
+      memory[userId] = {
+        name, phone,
+        lastAppointment: { date, month, time: selectedTime },
+        language: lang,
+        updatedAt: new Date().toISOString(),
+      };
+      saveMemory(memory);
+
+      // Reset state before async calls
+      allState[userId] = { step: "none", lang };
+      saveState(allState);
+
+      // Reply to customer
+      const reply = msg.success(name, phone, date, month, selectedTime);
+      sendReply(req, res, reply);
 
       // Save to Google Sheet
       try {
-        await axios.post(GOOGLE_SCRIPT_URL, {
-          type: "appointment",
-          name,
-          phone,
-          date,
-          time,
-          lang,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (err) {
-        console.error("Sheet error:", err.message);
-      }
+        await axios.post(GOOGLE_SCRIPT_URL,
+          new URLSearchParams({ type:"appointment", name, phone, date, month, time:selectedTime, lang, timestamp:new Date().toISOString() }).toString(),
+          { headers:{ "Content-Type":"application/x-www-form-urlencoded" } }
+        );
+      } catch (err) { console.error("Sheet error:", err.message); }
 
-      reply = msg.success(name, phone, date, time);
+      // Notify shop owner
+      await notifyOwner(name, phone, date, month, selectedTime);
 
-      // Reset state after booking
-      allState[userId] = { step: "none", lang };
+      return;
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
-  }
 
-  // ── ORDER STATUS FLOW ────────────────
+    // ── Order status ──────────────────────
+    if (state.step === "order_phone") {
+      if (!isValidPhone(input)) return sendReply(req, res, msg.invalidPhone);
 
-  if (state.step === "order_phone") {
-    if (!isValidPhone(input)) {
-      reply = msg.invalidPhone;
-    } else {
-      // Fetch order status from Google Sheet
+      allState[userId] = { step: "none", lang };
+      saveState(allState);
+
+      let reply = msg.orderNotFound;
       try {
-        const response = await axios.get(GOOGLE_SCRIPT_URL, {
-          params: { type: "order", phone: input },
-        });
+        const response = await axios.get(GOOGLE_SCRIPT_URL, { params:{ type:"order", phone:input } });
         const data = response.data;
+        if (data && data.found) reply = msg.orderFound(data.status, data.name);
+      } catch (err) { console.error("Order fetch error:", err.message); }
 
-        if (data && data.found) {
-          reply = msg.orderFound(data.status, data.name);
-        } else {
-          reply = msg.orderNotFound;
-        }
-      } catch (err) {
-        console.error("Order fetch error:", err.message);
-        reply = msg.orderNotFound;
-      }
-
-      allState[userId] = { step: "none", lang };
+      return sendReply(req, res, reply);
     }
-    saveState(allState);
-    return sendReply(req, res, reply);
+
+    // ── Fallback ──────────────────────────
+    console.log(`[${userId}] FALLBACK step="${state.step}" input="${input}"`);
+    return sendReply(req, res, msg.fallback);
+
+  } catch (err) {
+    console.error("UNHANDLED ERROR:", err.message, err.stack);
+    res.set("Content-Type", "text/xml");
+    return res.send("<Response><Message>Sorry, something went wrong. Please try again.</Message></Response>");
   }
-
-  // ─── FALLBACK ────────────────────────
-  reply = msg.fallback;
-  saveState(allState);
-  return sendReply(req, res, reply);
 });
 
-// ─── START SERVER ───────────────
+// ─── START ───────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Basaveshwar Opticals Bot running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Bot running on port ${PORT}`));
