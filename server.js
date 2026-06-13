@@ -87,7 +87,7 @@ What would you like to see?
       "4": {
         title: "🏪 Our Shop",
         images: [
-          { caption: "🏪 Basaveshwar Opticals — Front View", url: "https://YOUR_IMAGE_URL_8" },
+          { caption: "🏪 OptiCare — Front View", url: "https://YOUR_IMAGE_URL_8" },
           { caption: "🔬 Our Eye Testing Equipment", url: "https://YOUR_IMAGE_URL_9" },
           { caption: "🗂️ Our Frame Collection Display", url: "https://YOUR_IMAGE_URL_10" },
         ],
@@ -141,7 +141,7 @@ What would you like to see?
       "4": {
         title: "🏪 आमचे दुकान",
         images: [
-          { caption: "🏪 बसवेश्वर ऑप्टिकल्स — समोरील दृश्य", url: "https://YOUR_IMAGE_URL_8" },
+          { caption: "🏪 OptiCare — समोरील दृश्य", url: "https://YOUR_IMAGE_URL_8" },
           { caption: "🔬 आमची डोळे तपासणी उपकरणे", url: "https://YOUR_IMAGE_URL_9" },
           { caption: "🗂️ आमचा फ्रेम संग्रह", url: "https://YOUR_IMAGE_URL_10" },
         ],
@@ -160,7 +160,7 @@ What would you like to see?
 // ─── MESSAGES ────────────────────────────────────────────
 const messages = {
   en: {
-    welcome: `🏥 *Welcome to Basaveshwar Opticals!*
+    welcome: `🏥 *Welcome to OptiCare!*
 _Your Trusted Eye Care & Eyewear Partner_
 
 Please select your preferred language:
@@ -168,7 +168,7 @@ Please select your preferred language:
 1️⃣ English
 2️⃣ मराठी`,
 
-    menu: `👁️ *Basaveshwar Opticals — Main Menu*
+    menu: `👁️ *OptiCare — Main Menu*
 
 How can we assist you today?
 
@@ -219,7 +219,7 @@ _Reply with a number to continue_ 😊`,
 ⏰ Time: ${t}
 
 _Our team will contact you if needed._
-Thank you for choosing *Basaveshwar Opticals!* 🙏`,
+Thank you for choosing *OptiCare!* 🙏`,
 
     orderFound: (status, name) =>
       `📦 *Order Status*
@@ -281,7 +281,7 @@ _All services by experienced optometrist._
 
 0️⃣ Back to Main Menu`,
 
-    contact: `📞 *Contact Basaveshwar Opticals*
+    contact: `📞 *Contact OptiCare*
 
 📱 WhatsApp / Call: +91-XXXXXXXXXX
 📧 Email: [Your Email]
@@ -301,7 +301,7 @@ Please reply with a number from the menu 👇
   },
 
   mr: {
-    welcome: `🏥 *बसवेश्वर ऑप्टिकल्समध्ये आपले स्वागत आहे!*
+    welcome: `🏥 *OptiCareमध्ये आपले स्वागत आहे!*
 _आपला विश्वासू नेत्र सेवा केंद्र_
 
 कृपया आपली भाषा निवडा:
@@ -309,7 +309,7 @@ _आपला विश्वासू नेत्र सेवा केंद
 1️⃣ English
 2️⃣ मराठी`,
 
-    menu: `👁️ *बसवेश्वर ऑप्टिकल्स — मुख्य मेनू*
+    menu: `👁️ *OptiCare — मुख्य मेनू*
 
 आज आम्ही आपली कशी मदत करू?
 
@@ -360,7 +360,7 @@ _पुढे जाण्यासाठी नंबर टाका_ 😊`,
 ⏰ वेळ: ${t}
 
 _गरज असल्यास आमची टीम तुम्हाला संपर्क करेल._
-*बसवेश्वर ऑप्टिकल्स* निवडल्याबद्दल धन्यवाद! 🙏`,
+*OptiCare* निवडल्याबद्दल धन्यवाद! 🙏`,
 
     orderFound: (status, name) =>
       `📦 *ऑर्डर स्थिती*
@@ -422,7 +422,7 @@ _अनुभवी ऑप्टोमेट्रिस्टद्वारे
 
 0️⃣ मुख्य मेनूवर परत`,
 
-    contact: `📞 *बसवेश्वर ऑप्टिकल्स संपर्क*
+    contact: `📞 *OptiCare संपर्क*
 
 📱 WhatsApp / कॉल: +91-XXXXXXXXXX
 📧 ईमेल: [आपला ईमेल]
@@ -515,7 +515,7 @@ function sendReply(req, res, reply) {
 }
 
 // ─── ROUTES ──────────────────────────────────────────────
-app.get("/", (req, res) => res.send("✅ Basaveshwar Opticals Bot is running"));
+app.get("/", (req, res) => res.send("✅ OptiCare Bot is running"));
 
 app.get("/debug", (req, res) => {
   res.json({ ok: true, state: loadState(), memory: loadMemory() });
