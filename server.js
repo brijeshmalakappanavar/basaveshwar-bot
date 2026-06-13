@@ -627,44 +627,17 @@ app.post("/chat", async (req, res) => {
         return sendReply(req, res, cat.menu);
       }
 
-      // Reset state back to none right away
       allState[userId] = { ...state, step: "none" };
       saveState(allState);
 
-      // Send category title first as TwiML reply
-      // Then send each image via Twilio API (images can't go in TwiML bulk)
-      sendReply(req, res, `${selected.title}\n\nSending images... 📸`);
+      // Build single message with image links — works on all Twilio plans including sandbox
+      let galleryMsg = `${selected.title}\n\n`;
+      selected.images.forEach((img) => {
+        galleryMsg += `${img.caption}\n${img.url}\n\n`;
+      });
+      galleryMsg += `_Tap any link above to view the image_ 👆\n\n0️⃣ Main Menu | 6️⃣ More Gallery`;
 
-      // Fire images after response (non-blocking)
-      for (const img of selected.images) {
-        await sendImage(userId, img.caption, img.url);
-      }
-
-      // Send back-to-menu hint after images
-      await sendImage(
-        userId,
-        `\n_Reply *0* to go back to Main Menu or *6* to see more_ 😊`,
-        // no image for this one — send as plain text message instead
-        null
-      ).catch(() => {});
-
-      // Send the "back to menu" text as a separate plain message
-      try {
-        await axios.post(
-          `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
-          new URLSearchParams({
-            From: TWILIO_FROM,
-            To: userId,
-            Body: `_Reply *0* for Main Menu or *6* to browse more gallery_ 😊`,
-          }).toString(),
-          {
-            auth: { username: TWILIO_SID, password: TWILIO_TOKEN },
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          }
-        );
-      } catch (e) { console.error("Gallery hint error:", e.message); }
-
-      return; // response already sent above
+      return sendReply(req, res, galleryMsg);
     }
 
     // ── Appointment: name ─────────────────
