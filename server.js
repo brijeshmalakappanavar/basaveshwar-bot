@@ -73,15 +73,15 @@ What would you like to see?
       "2": {
         title: "🌞 Sunglasses",
         images: [
-          { caption: "😎 UV Protection Sunglasses — ₹600 onwards", url: "https://YOUR_IMAGE_URL_4" },
-          { caption: "🏍️ Riding / Sports Sunglasses — ₹800 onwards", url: "https://YOUR_IMAGE_URL_5" },
+          { caption: "😎 UV Protection Sunglasses — ₹600 onwards", url: "https://i.ibb.co/cjrXwV8/OIP-1-uv.webp" },
+          { caption: "🏍️ Riding / Sports Sunglasses — ₹800 onwards", url: "https://i.ibb.co/tTKfj9m8/432456.webp" },
         ],
       },
       "3": {
         title: "👶 Kids Eyewear",
         images: [
-          { caption: "👦 Kids Frames (Flexible & Durable) — ₹400 onwards", url: "https://YOUR_IMAGE_URL_6" },
-          { caption: "🎨 Colourful Kids Frames — ₹400 onwards", url: "https://YOUR_IMAGE_URL_7" },
+          { caption: "👦 Kids Frames (Flexible & Durable) — ₹400 onwards", url: "https://i.ibb.co/zhnF7RWB/9bf35a570e91f7a5f5dab869796a0d75-kids.jpg" },
+          { caption: "🎨 Colourful Kids Frames — ₹400 onwards", url: "https://i.ibb.co/fVsYw7gW/516dd8b2f297fa9e21fef357dfc59571-kids.jpg" },
         ],
       },
       "4": {
@@ -95,8 +95,8 @@ What would you like to see?
       "5": {
         title: "✨ Before & After",
         images: [
-          { caption: "✅ Customer Transformation — Progressive Lenses", url: "https://YOUR_IMAGE_URL_11" },
-          { caption: "✅ Customer Transformation — Kids Specs", url: "https://YOUR_IMAGE_URL_12" },
+          { caption: "✅ Before & After — Anti-Glare Coating", url: "https://i.ibb.co/gMrDfkrD/Glasses-with-anti-glare-coating.jpg" },
+          { caption: "✅ Before & After — Lens Transformation", url: "https://i.ibb.co/7JMwP5mR/maxresdefault.jpg" },
         ],
       },
     },
@@ -127,15 +127,15 @@ What would you like to see?
       "2": {
         title: "🌞 सनग्लासेस",
         images: [
-          { caption: "😎 UV प्रोटेक्शन सनग्लासेस — ₹६०० पासून", url: "https://YOUR_IMAGE_URL_4" },
-          { caption: "🏍️ रायडिंग / स्पोर्ट्स सनग्लासेस — ₹८०० पासून", url: "https://YOUR_IMAGE_URL_5" },
+          { caption: "😎 UV प्रोटेक्शन सनग्लासेस — ₹६०० पासून", url: "https://i.ibb.co/cjrXwV8/OIP-1-uv.webp" },
+          { caption: "🏍️ रायडिंग / स्पोर्ट्स सनग्लासेस — ₹८०० पासून", url: "https://i.ibb.co/tTKfj9m8/432456.webp" },
         ],
       },
       "3": {
         title: "👶 मुलांचा चष्मा",
         images: [
-          { caption: "👦 मुलांचे फ्रेम (फ्लेक्सिबल) — ₹४०० पासून", url: "https://YOUR_IMAGE_URL_6" },
-          { caption: "🎨 रंगीत मुलांचे फ्रेम — ₹४०० पासून", url: "https://YOUR_IMAGE_URL_7" },
+          { caption: "👦 मुलांचे फ्रेम (फ्लेक्सिबल) — ₹४०० पासून", url: "https://i.ibb.co/zhnF7RWB/9bf35a570e91f7a5f5dab869796a0d75-kids.jpg" },
+          { caption: "🎨 रंगीत मुलांचे फ्रेम — ₹४०० पासून", url: "https://i.ibb.co/fVsYw7gW/516dd8b2f297fa9e21fef357dfc59571-kids.jpg" },
         ],
       },
       "4": {
@@ -149,8 +149,8 @@ What would you like to see?
       "5": {
         title: "✨ बिफोर & आफ्टर",
         images: [
-          { caption: "✅ ग्राहक परिवर्तन — प्रोग्रेसिव्ह लेन्स", url: "https://YOUR_IMAGE_URL_11" },
-          { caption: "✅ ग्राहक परिवर्तन — मुलांचा चष्मा", url: "https://YOUR_IMAGE_URL_12" },
+          { caption: "✅ बिफोर & आफ्टर — अँटी-ग्लेअर कोटिंग", url: "https://i.ibb.co/gMrDfkrD/Glasses-with-anti-glare-coating.jpg" },
+          { caption: "✅ बिफोर & आफ्टर — लेन्स परिवर्तन", url: "https://i.ibb.co/7JMwP5mR/maxresdefault.jpg" },
         ],
       },
     },
