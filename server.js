@@ -65,9 +65,9 @@ What would you like to see?
       "1": {
         title: "👓 Spectacle Frames",
         images: [
-          { caption: "👓 Classic Full-Rim Frames — ₹500 onwards", url: "https://i.ibb.co/gZC60Qd9/image.jpg" },
-          { caption: "🔲 Rimless & Half-Rim Frames — ₹800 onwards", url: "https://i.ibb.co/21RC33K1/image.jpg" },
-          { caption: "✨ Premium Branded Frames (Titan, Ray-Ban) — ₹1500 onwards", url: "https://i.ibb.co/YFt26ydX/image.jpg" },
+          { caption: "👓 Classic Full-Rim Frames — ₹500 onwards", url: "https://i.ibb.co/B2VthkH9/Silver-Rectangle-Rimless-Frameless-Frame-Glasses.webp" },
+          { caption: "🔲 Rimless & Half-Rim Frames — ₹800 onwards", url: "https://i.ibb.co/MxyKDYzH/2-Semi-rimmed-830x390.jpg" },
+          { caption: "✨ Premium Branded Frames (Titan, Ray-Ban) — ₹1500 onwards", url: "https://i.ibb.co/93H8fnfd/OIP.webp" },
         ],
       },
       "2": {
