@@ -2,8 +2,10 @@ import axios from "axios";
 import express from "express";
 import fs from "fs";
 import path from "path";
+import cors from "cors";
 
 const app = express();
+app.use(cors({ origin: "https://opticare-shribasaveshwar.netlify.app" }));
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -519,6 +521,49 @@ app.get("/", (req, res) => res.send("✅ OptiCare Bot is running"));
 
 app.get("/debug", (req, res) => {
   res.json({ ok: true, state: loadState(), memory: loadMemory() });
+});
+
+// ADD THESE TWO NEW ROUTES RIGHT HERE:
+
+app.get("/health", (req, res) => res.json({ status: "ok" }));
+
+app.post("/api/book", async (req, res) => {
+  try {
+    const { name, phone, date, slot, service } = req.body;
+
+    if (!name || !phone || !date || !slot || !service) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ error: "Invalid phone number" });
+    }
+
+    try {
+      await axios.post(GOOGLE_SCRIPT_URL,
+        new URLSearchParams({
+          type: "appointment",
+          name,
+          phone,
+          date,
+          month: "",
+          time: slot,
+          service,
+          source: "pwa",
+          timestamp: new Date().toISOString(),
+        }).toString(),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      );
+    } catch (err) {
+      console.error("Sheet error:", err.message);
+    }
+
+    await notifyOwner(name, phone, date, "", slot);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Booking error:", err.message);
+    return res.status(500).json({ error: "Server error" });
+  }
 });
 
 // ─── MAIN WEBHOOK ────────────────────────────────────────
